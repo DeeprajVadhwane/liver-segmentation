@@ -1,58 +1,79 @@
-from flask import Flask, request, render_template
-import tensorflow as tf
-from tensorflow.keras.models import load_model
-from tensorflow.keras.preprocessing.image import load_img, img_to_array
-import numpy as np
 import os
+import numpy as np
+import nibabel as nib
+import tensorflow as tf
+from skimage.transform import resize
+from flask import Flask, request, render_template, redirect, url_for
 
 app = Flask(__name__)
 
-# Load your trained model
-model = load_model('fcn_model.h5')
+# Create the temporary directory if it doesn't exist
+if not os.path.exists('temp'):
+    os.makedirs('temp')
 
-# Recompile the model to ensure metrics are properly initialized
-model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy', tf.keras.metrics.Precision()])
+# Load your pre-trained ResNet model
+model = tf.keras.models.load_model('resnet_model.h5')
 
-# Define a function to process and predict the image
-def predict_tumor(image_path):
-    img = load_img(image_path, target_size=(224, 224))  # Resize to your model's input size
-    img_array = img_to_array(img)
-    img_array = np.expand_dims(img_array, axis=0)  # Add batch dimension
-    img_array = img_array / 255.0  # Normalize to [0, 1]
+@app.route('/')
+def home():
+    return render_template('index.html')
 
-    prediction = model.predict(img_array)
-    print(f"Prediction shape: {prediction.shape}, Prediction: {prediction}")
-
-    # Check if the predicted mask has any non-zero values
-    has_tumor = np.any(prediction > 0.5)
-
-    return 'Yes' if has_tumor else 'No'
-
-# Define the routes for the web app
-@app.route('/', methods=['GET', 'POST'])
-def upload_file():
-    if request.method == 'POST':
-        # Check if the post request has the file part
-        if 'file' not in request.files:
-            return render_template('index.html', prediction='No file part')
-        
-        file = request.files['file']
-        
-        # If user does not select file, browser also submits an empty part without filename
-        if file.filename == '':
-            return render_template('index.html', prediction='No selected file')
-        
-        if file:
-            file_path = os.path.join('uploads', file.filename)
-            file.save(file_path)
-            
-            # Predict the uploaded image
-            prediction = predict_tumor(file_path)
-            return render_template('index.html', prediction=prediction)
+@app.route('/predict', methods=['POST'])
+def predict():
+    if 'file' not in request.files:
+        return redirect(url_for('home'))
     
-    return render_template('index.html', prediction='')
+    file = request.files['file']
+    
+    if file.filename == '':
+        return redirect(url_for('home'))
+    
+    if file:
+        # Save the uploaded file to a temporary location
+        file_path = os.path.join('temp', file.filename)
+        file.save(file_path)
+        
+        # Preprocess the uploaded .nii file
+        img_data = read_nii(file_path)
+        
+        # Further preprocess the image data for the model
+        img_data = preprocess_image(img_data)
+        
+        # Make predictions
+        prediction = model.predict(img_data)
+        
+        # Interpret the prediction
+        result = interpret_prediction(prediction)
+        
+        # Remove the temporary file
+        os.remove(file_path)
+        
+        return render_template('result.html', result=result)
+    return redirect(url_for('home'))
 
-if __name__ == "__main__":
-    # Ensure the upload folder exists
-    os.makedirs('uploads', exist_ok=True)
+def read_nii(filepath):
+    ct_scan = nib.load(filepath)
+    array = ct_scan.get_fdata()
+    array = np.rot90(np.array(array))
+    return array
+
+def preprocess_image(img_data):
+    # Assume the model expects (1, 224, 224, 3) input shape
+    if len(img_data.shape) == 3:  # 3D NIfTI image (single channel)
+        img_data = img_data[..., np.newaxis]
+
+    # Resize to the model input size, e.g., (224, 224, 224, 1)
+    img_data = resize(img_data, (224, 224, 224, 1), mode='constant', preserve_range=True)
+    img_data = np.expand_dims(img_data, axis=0)  # Add batch dimension
+
+    # Normalize the image data
+    img_data = img_data / np.max(img_data)
+    
+    return img_data
+
+def interpret_prediction(prediction):
+    # Implement your prediction interpretation logic here
+    return "Tumor Detected" if prediction[0] > 0.5 else "No Tumor Detected"
+
+if __name__ == '__main__':
     app.run(debug=True)
