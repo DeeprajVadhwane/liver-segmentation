@@ -73,36 +73,40 @@ We selected the ResNet model as our final model because it demonstrated the high
 ## Project Structure
 
 Liver-Tumor-Segmentation/
-│
-├── data/
-│   ├── train/
-│   │   ├── images/
-│   │   └── masks/
-│   ├── val/
-│   │   ├── images/
-│   │   └── masks/
-│   └── test/
-│       ├── images/
-│       └── masks/
-│
-├── models/
-│   ├── simple_cnn.h5
-│   ├── unet_model.h5
-│   └── resnet_model.h5
-│
-├── scripts/
-│   ├── data_preprocessing.py
-│   ├── train_simple_cnn.py
-│   ├── train_unet.py
-│   └── train_resnet.py
-│
-├── notebooks/
-│   ├── Data_Preprocessing.ipynb
-│   ├── Train_Simple_CNN.ipynb
-│   ├── Train_UNet.ipynb
-│   └── Train_ResNet.ipynb
-│
-├── README.md
-└── requirements.txt
+Liver-Tumor-Segmentation/
+    │
+    ├── data/
+    │ ├── train/
+    │ │ ├── images/
+    │ │ └── masks/
+    │ ├── val/
+    │ │ ├── images/
+    │ │ └── masks/
+    │ └── test/
+    │ ├── images/
+    │ └── masks/
+    │
+    ├── models/
+    │ ├── simple_cnn.h5
+    │ ├── unet_model.h5
+    │ └── resnet_model.h5
+    │
+    ├── scripts/
+    │ ├── data_preprocessing.py
+    │ ├── train_simple_cnn.py
+    │ ├── train_unet.py
+    │ └── train_resnet.py
+    │
+    ├── notebooks/
+    │ ├── Data_Preprocessing.ipynb
+    │ ├── Train_Simple_CNN.ipynb
+    │ ├── Train_UNet.ipynb
+    │ └── Train_ResNet.ipynb
+    │
+    ├── README.md
+    └── requirements.txt
+
+
+
 
 
